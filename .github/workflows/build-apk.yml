@@ -17,12 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
-      - uses: android-actions/setup-android@v3
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -40,6 +38,9 @@ jobs:
           cp index.html "$A/app/src/main/assets/www/index.html"
           cp icon-512.png "$R/drawable-nodpi/bear.png"
           cp icon-512.png "$R/mipmap-nodpi/ic_launcher.png"
+
+          # ---- the runner already has the Android SDK; just point Gradle at it
+          echo "sdk.dir=${ANDROID_HOME:-/usr/local/lib/android/sdk}" > "$A/local.properties"
 
           # ---- fixed signing key (so every new APK installs over the old one)
           base64 -d > "$A/app/duo.keystore" <<'B64'
