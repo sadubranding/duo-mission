@@ -1,0 +1,412 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'index.html'
+      - 'icon-512.png'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Generate Android project
+        run: |
+          set -euo pipefail
+          A=android
+          J=$A/app/src/main/java/com/sayeed/duomission
+          R=$A/app/src/main/res
+          mkdir -p "$J" "$A/app/src/main/assets/www" "$R/values" "$R/drawable" "$R/drawable-nodpi" "$R/mipmap-anydpi-v26" "$R/mipmap-nodpi"
+
+          # ---- web app + icon taken from the repo root
+          cp index.html "$A/app/src/main/assets/www/index.html"
+          cp icon-512.png "$R/drawable-nodpi/bear.png"
+          cp icon-512.png "$R/mipmap-nodpi/ic_launcher.png"
+
+          # ---- fixed signing key (so every new APK installs over the old one)
+          base64 -d > "$A/app/duo.keystore" <<'B64'
+          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
+          B64
+
+          cat > "$A/settings.gradle" <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "DuoMission"
+          include ':app'
+          EOF
+
+          cat > "$A/build.gradle" <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.5.2' apply false
+          }
+          EOF
+
+          cat > "$A/gradle.properties" <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.nonTransitiveRClass=true
+          EOF
+
+          cat > "$A/app/build.gradle" <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.sayeed.duomission'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId 'com.sayeed.duomission'
+                  minSdk 24
+                  targetSdk 34
+                  versionCode (project.findProperty('vc') ?: '1').toInteger()
+                  versionName '1.0'
+              }
+
+              signingConfigs {
+                  duo {
+                      storeFile file('duo.keystore')
+                      storeType 'pkcs12'
+                      storePassword 'duomission'
+                      keyAlias 'duo'
+                      keyPassword 'duomission'
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.duo
+                      minifyEnabled false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              lint {
+                  checkReleaseBuilds false
+                  abortOnError false
+              }
+          }
+          EOF
+
+          cat > "$A/app/src/main/AndroidManifest.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:allowBackup="false"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="Duo Mission"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="false">
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode|density"
+                      android:exported="true"
+                      android:screenOrientation="portrait"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > "$R/values/styles.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+                  <item name="android:windowBackground">@android:color/white</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > "$R/values/colors.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_bg">#8CC4F2</color>
+          </resources>
+          EOF
+
+          cat > "$R/drawable/ic_fg.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <inset xmlns:android="http://schemas.android.com/apk/res/android"
+              android:drawable="@drawable/bear"
+              android:insetLeft="16%"
+              android:insetTop="16%"
+              android:insetRight="16%"
+              android:insetBottom="16%" />
+          EOF
+
+          cat > "$R/mipmap-anydpi-v26/ic_launcher.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_bg" />
+              <foreground android:drawable="@drawable/ic_fg" />
+          </adaptive-icon>
+          EOF
+
+          cat > "$J/MainActivity.java" <<'EOF'
+          package com.sayeed.duomission;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.graphics.Bitmap;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.Window;
+          import android.view.WindowInsets;
+          import android.view.WindowInsetsController;
+          import android.view.WindowManager;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              private static final String START = "file:///android_asset/www/index.html";
+              private WebView web;
+              private float topDp = 0f;
+              private float bottomDp = 0f;
+              private boolean loaded = false;
+
+              public class InsetsBridge {
+                  @JavascriptInterface
+                  public float top() { return topDp; }
+
+                  @JavascriptInterface
+                  public float bottom() { return bottomDp; }
+              }
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  Window w = getWindow();
+                  w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                  w.setStatusBarColor(Color.TRANSPARENT);
+                  w.setNavigationBarColor(Color.TRANSPARENT);
+                  if (Build.VERSION.SDK_INT >= 29) {
+                      w.setStatusBarContrastEnforced(false);
+                      w.setNavigationBarContrastEnforced(false);
+                  }
+                  if (Build.VERSION.SDK_INT >= 28) {
+                      WindowManager.LayoutParams lp = w.getAttributes();
+                      lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                      w.setAttributes(lp);
+                  }
+                  if (Build.VERSION.SDK_INT >= 30) {
+                      w.setDecorFitsSystemWindows(false);
+                      WindowInsetsController c = w.getInsetsController();
+                      if (c != null) {
+                          c.setSystemBarsAppearance(WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                                  WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+                          c.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+                      }
+                  } else {
+                      int f = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                              | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                              | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+                      if (Build.VERSION.SDK_INT >= 23) {
+                          f |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                      }
+                      w.getDecorView().setSystemUiVisibility(f);
+                  }
+
+                  web = new WebView(this);
+                  web.setBackgroundColor(Color.WHITE);
+                  web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                  WebSettings s = web.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(false);
+                  web.addJavascriptInterface(new InsetsBridge(), "DuoInsets");
+
+                  web.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public void onPageFinished(WebView view, String url) {
+                          pushInsets();
+                      }
+
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          Uri u = request.getUrl();
+                          if ("file".equals(u.getScheme())) {
+                              return false;
+                          }
+                          try {
+                              startActivity(new Intent(Intent.ACTION_VIEW, u));
+                          } catch (Exception ignored) {
+                          }
+                          return true;
+                      }
+                  });
+
+                  web.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                      @Override
+                      public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                          float d = getResources().getDisplayMetrics().density;
+                          int t;
+                          int b;
+                          int kb = 0;
+                          if (Build.VERSION.SDK_INT >= 30) {
+                              android.graphics.Insets bars = insets.getInsets(
+                                      WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                              t = bars.top;
+                              b = bars.bottom;
+                              if (insets.isVisible(WindowInsets.Type.ime())) {
+                                  kb = insets.getInsets(WindowInsets.Type.ime()).bottom;
+                              }
+                          } else {
+                              t = insets.getSystemWindowInsetTop();
+                              int stable = insets.getStableInsetBottom();
+                              b = stable;
+                              kb = Math.max(0, insets.getSystemWindowInsetBottom() - stable);
+                          }
+                          topDp = t / d;
+                          bottomDp = (kb > 0 ? 0 : b) / d;
+                          v.setPadding(0, 0, 0, kb);
+                          loadOnce();
+                          pushInsets();
+                          return insets;
+                      }
+                  });
+
+                  setContentView(web);
+                  web.requestApplyInsets();
+                  web.postDelayed(new Runnable() {
+                      @Override
+                      public void run() {
+                          loadOnce();
+                      }
+                  }, 700);
+              }
+
+              private void loadOnce() {
+                  if (loaded) {
+                      return;
+                  }
+                  loaded = true;
+                  web.loadUrl(START);
+              }
+
+              private void pushInsets() {
+                  if (web == null || !loaded) {
+                      return;
+                  }
+                  String js = "(function(){var r=document.documentElement;if(r){"
+                          + "r.style.setProperty('--sat','" + topDp + "px');"
+                          + "r.style.setProperty('--sab','" + bottomDp + "px');}})()";
+                  web.evaluateJavascript(js, null);
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (web != null) {
+                      web.destroy();
+                  }
+                  super.onDestroy();
+              }
+          }
+          EOF
+
+          echo "Android project generated:"
+          find "$A" -type f | sort
+
+
+      - name: Build APK
+        working-directory: android
+        run: gradle assembleRelease -Pvc=${{ github.run_number }} --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk DuoMission.apk
+
+      - name: Publish APK to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Duo Mission APK (latest)
+          body: Download DuoMission.apk, open it on your phone and install.
+          files: DuoMission.apk
