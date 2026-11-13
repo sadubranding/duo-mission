@@ -124,6 +124,8 @@ jobs:
               id 'com.android.application'
           }
 
+          def vcode = (project.findProperty('vc') ?: '1').toString().toInteger()
+
           android {
               namespace 'com.sayeed.duomission'
               compileSdk 34
@@ -132,7 +134,7 @@ jobs:
                   applicationId 'com.sayeed.duomission'
                   minSdk 24
                   targetSdk 34
-                  versionCode (project.findProperty('vc') ?: '1').toInteger()
+                  versionCode vcode
                   versionName '1.0'
               }
 
